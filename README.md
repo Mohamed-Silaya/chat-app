@@ -20,7 +20,12 @@ It supports **multiple chat rooms**, **instant messaging**, a **RESTful API**, a
 It’s ideal as a base for **social platforms**, **team communication tools**, or **customer support systems** — and great for learning Django Channels and React integration.
 
 ---
-
+## Screen shots 
+![welcome](https://github.com/Mohamed-Silaya/chat-app/blob/main/image/Welcome.png)
+![Home](https://github.com/Mohamed-Silaya/chat-app/blob/main/image/Home.png)
+![1](https://github.com/Mohamed-Silaya/chat-app/blob/main/image/1.png)
+![2](https://github.com/Mohamed-Silaya/chat-app/blob/main/image/2.png)
+---
 ## ✨ Features
 ### 🔧 Backend Features
 - ⚡ **Real-Time Messaging** — Instant communication using WebSockets and Django Channels  
