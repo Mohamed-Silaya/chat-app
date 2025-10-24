@@ -1,0 +1,46 @@
+
+services:
+  backend:
+    build: 
+      context: ./Back
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=False
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    volumes:
+      - ./Back:/app
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             daphne project.asgi:application --bind 0.0.0.0 --port 8000"
+
+  frontend:
+    build:
+      context: ./Front/chat-front
+      dockerfile: ../Dockerfile.frontend
+    ports:
+      - "5173:5173"
+    environment:
+      # - VITE_API_BASE_URL=http://localhost:8000
+      VITE_API_BASE_URL: "http://backend:8000"
+
+    depends_on:
+      - backend
+    # volumes:
+    #   - ./Front/chat-front:/app
+    #   - /app/node_modules:/app/node_modules
+
+      # - /app/node_modules
+    command: ["npm", "run", "dev", "--host"]
+
+  redis:
+    image: redis:alpine
+    container_name: chat-redis
+    ports:
+      - "6379:6379"
+    restart: always
+

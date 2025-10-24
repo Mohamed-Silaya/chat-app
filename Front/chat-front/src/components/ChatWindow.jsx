@@ -12,18 +12,24 @@ const ChatWindow = ({ roomName, username, onRoomChange }) => {
   const containerRef = useRef(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
 
+  // Handle scroll detection
   useEffect(() => {
     const handleScroll = () => {
       if (!containerRef.current) return;
       const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-      setIsAtBottom(scrollHeight - scrollTop - clientHeight < 50);
+      const threshold = 100;
+      const isBottom = scrollHeight - scrollTop - clientHeight < threshold;
+      setIsAtBottom(isBottom);
     };
 
     const container = containerRef.current;
-    container?.addEventListener('scroll', handleScroll);
-    return () => container?.removeEventListener('scroll', handleScroll);
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
   }, []);
 
+  // Load messages and setup WebSocket
   useEffect(() => {
     if (roomName) {
       loadPreviousMessages();
@@ -34,11 +40,23 @@ const ChatWindow = ({ roomName, username, onRoomChange }) => {
     };
   }, [roomName]);
 
+  // Auto-scroll ONLY if user is at bottom
   useEffect(() => {
-    if (isAtBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isAtBottom && messages.length > 0) {
+      scrollToBottom();
     }
-  }, [messages, isAtBottom]);
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    if (messagesEndRef.current && containerRef.current) {
+      // Use scrollIntoView with block: 'end' to prevent page scroll
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'end',
+        inline: 'nearest'
+      });
+    }
+  };
 
   const loadPreviousMessages = async () => {
     try {
@@ -52,6 +70,12 @@ const ChatWindow = ({ roomName, username, onRoomChange }) => {
         isSystem: false
       }));
       setMessages(previousMessages);
+      // Force scroll to bottom after loading
+      setTimeout(() => {
+        if (containerRef.current) {
+          containerRef.current.scrollTop = containerRef.current.scrollHeight;
+        }
+      }, 100);
     } catch (error) {
       console.error('Error loading messages:', error);
     } finally {
@@ -62,7 +86,8 @@ const ChatWindow = ({ roomName, username, onRoomChange }) => {
   const setupWebSocket = () => {
     if (socket) socket.close();
 
-    const wsUrl = `ws://localhost:8000/ws/chat/${roomName}/`;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.hostname}:8000/ws/chat/${roomName}/`;
     const newSocket = new WebSocket(wsUrl);
 
     newSocket.onopen = () => setConnectionStatus('connected');
@@ -113,7 +138,7 @@ const ChatWindow = ({ roomName, username, onRoomChange }) => {
     <div className="chat-window">
       <div className="chat-header">
         <div className="room-info">
-          <h3> {roomName}</h3>
+          <h3>{roomName}</h3>
           <div className="connection-status">
             <span className={`status ${connectionStatus}`}>
               {connectionStatus === 'connected' ? '🟢 Connected' :
@@ -123,14 +148,24 @@ const ChatWindow = ({ roomName, username, onRoomChange }) => {
           </div>
         </div>
         <div className="chat-actions">
-          <button onClick={reconnect} className="btn btn-reconnect">🔄</button>
-          <button onClick={leaveRoom} className="btn btn-leave">🚪 Leave</button>
+          <button onClick={reconnect} className="btn btn-reconnect" title="Reconnect">
+            🔄
+          </button>
+          <button onClick={leaveRoom} className="btn btn-leave">
+            🚪 Leave
+          </button>
         </div>
       </div>
 
       <div className="message-list-container" ref={containerRef}>
         {loading ? (
-          Array.from({ length: 5 }).map((_, i) => <MessageSkeleton key={i} />)
+          <>
+            <MessageSkeleton />
+            <MessageSkeleton />
+            <MessageSkeleton />
+            <MessageSkeleton />
+            <MessageSkeleton />
+          </>
         ) : (
           <MessageList messages={messages} currentUser={username} />
         )}
@@ -142,7 +177,6 @@ const ChatWindow = ({ roomName, username, onRoomChange }) => {
   );
 };
 
-// Skeleton for loading
 const MessageSkeleton = () => (
   <div className="message-skeleton">
     <div className="skeleton-avatar"></div>
